@@ -447,7 +447,7 @@ def mcp_tools_span(
         disabled: If True, we will return a Span but the Span will not be recorded.
     """
     return get_trace_provider().create_span(
-        span_data=MCPListToolsSpanData(server=server, result=result),
+        span_data=MCPListToolsSpanData(server=server, result=result if result is not None else []),
         span_id=span_id,
         parent=parent,
         disabled=disabled,

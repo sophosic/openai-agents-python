@@ -131,7 +131,8 @@ class MCPUtil:
 
         with mcp_tools_span(server=server.name) as span:
             tools = await server.list_tools(run_context, agent)
-            span.span_data.result = [tool.name for tool in tools]
+            # Ensure result is always an array of strings, even if empty
+            span.span_data.result = [tool.name for tool in tools] if tools else []
 
         return [cls.to_function_tool(tool, server, convert_schemas_to_strict) for tool in tools]
 
