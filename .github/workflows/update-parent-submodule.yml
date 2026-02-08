@@ -1,0 +1,74 @@
+# Automatically update parent monorepo's submodule reference when pushed
+# This keeps sophosic-platform in sync with the latest openai-agents-python commit
+name: Update Parent Submodule
+
+on:
+  push:
+    branches:
+      - main
+      - 'sophosic-patches-*'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  update-parent:
+    runs-on: ubuntu-latest
+    # Skip if commit was made by this workflow (prevent infinite loop)
+    if: "!contains(github.event.head_commit.message, '[skip-submodule-update]')"
+
+    steps:
+      - name: Checkout parent monorepo
+        uses: actions/checkout@v4
+        with:
+          repository: sophosic/sophosic-platform
+          token: ${{ secrets.PARENT_REPO_PAT }}
+          submodules: true
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update openai-agents-python submodule to latest
+        run: |
+          SUBMODULE_PATH="apps/backend/libs/openai-agents-python"
+          BRANCH="${{ github.ref_name }}"
+
+          # Update submodule to latest commit on the pushed branch
+          cd "$SUBMODULE_PATH"
+          git fetch origin "$BRANCH"
+          git checkout "origin/$BRANCH"
+          cd ../../../..
+
+          # Stage the submodule update
+          git add "$SUBMODULE_PATH"
+
+          # Check if there are changes to commit
+          if git diff --cached --quiet; then
+            echo "No submodule changes to commit"
+            exit 0
+          fi
+
+          # Get the new commit SHA for the commit message
+          NEW_SHA=$(cd "$SUBMODULE_PATH" && git rev-parse --short HEAD)
+
+          # Commit and push
+          git commit -m "chore(openai-agents): update submodule to ${NEW_SHA}
+
+          Auto-updated by openai-agents-python repo push workflow.
+
+          Branch: $BRANCH
+          Triggered by: ${{ github.event.head_commit.message }}
+
+          [skip-submodule-update]"
+
+          git push origin main
+
+      - name: Summary
+        run: |
+          echo "### Parent Submodule Updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "openai-agents-python submodule reference in sophosic-platform has been updated." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
