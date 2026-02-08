@@ -31,14 +31,14 @@ jobs:
 
       - name: Update openai-agents-python submodule to latest
         run: |
-          SUBMODULE_PATH="apps/backend/libs/openai-agents-python"
+          SUBMODULE_PATH="apps/openai-agents-python"
           BRANCH="${{ github.ref_name }}"
 
           # Update submodule to latest commit on the pushed branch
           cd "$SUBMODULE_PATH"
           git fetch origin "$BRANCH"
           git checkout "origin/$BRANCH"
-          cd ../../../..
+          cd ../..
 
           # Stage the submodule update
           git add "$SUBMODULE_PATH"
